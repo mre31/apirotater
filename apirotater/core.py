@@ -22,6 +22,7 @@ class APIRotater:
             return
         
         self._api_keys = []
+        self._key_names = {}  # Map api key values to their variable names
         self._usage_stats = {}
         self._rate_limits = {}
         self._load_api_keys()
@@ -45,6 +46,7 @@ class APIRotater:
         for key, value in os.environ.items():
             if key.startswith('API_KEY_') and value:
                 self._api_keys.append(value)
+                self._key_names[value] = key  # Store variable name for this key
                 self._usage_stats[value] = 0
                 self._rate_limits[value] = []
     
@@ -104,12 +106,17 @@ class APIRotater:
     
     def usage(self) -> Dict[str, int]:
         """
-        Returns usage statistics for API keys.
+        Returns usage statistics for API keys by their variable names.
         
         Returns:
-            Usage counts for API keys
+            Usage counts for API keys, mapped by variable names (e.g., API_KEY_1)
         """
-        return self._usage_stats.copy()
+        # Return usage stats with variable names instead of actual keys
+        named_stats = {}
+        for key, count in self._usage_stats.items():
+            var_name = self._key_names.get(key, "UNKNOWN_KEY")
+            named_stats[var_name] = count
+        return named_stats
     
     def get_all_keys(self) -> List[str]:
         """
@@ -119,6 +126,15 @@ class APIRotater:
             List of API keys
         """
         return self._api_keys.copy()
+    
+    def get_key_names(self) -> Dict[str, str]:
+        """
+        Returns a mapping of API keys to their variable names.
+        
+        Returns:
+            Dictionary mapping API key values to their variable names
+        """
+        return self._key_names.copy()
 
 # Singleton instance
 _apirotater = APIRotater()
@@ -133,9 +149,13 @@ def hit(api_key: str) -> None:
     _apirotater.hit(api_key)
 
 def usage() -> Dict[str, int]:
-    """Returns usage statistics for all keys."""
+    """Returns usage statistics for all keys by their variable names."""
     return _apirotater.usage()
 
 def get_all_keys() -> List[str]:
     """Lists all loaded API keys."""
-    return _apirotater.get_all_keys() 
+    return _apirotater.get_all_keys()
+
+def get_key_names() -> Dict[str, str]:
+    """Returns a mapping of API keys to their variable names."""
+    return _apirotater.get_key_names() 
