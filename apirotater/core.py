@@ -1,7 +1,7 @@
 import os
 import time
 import dotenv
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Union, Any
 from datetime import datetime, timedelta
 
 class RateLimitExceeded(Exception):
@@ -104,18 +104,42 @@ class APIRotater:
         # Update rate limit status
         self._rate_limits[api_key].append(datetime.now())
     
-    def usage(self) -> Dict[str, int]:
+    def usage(self, key_index: Union[int, str] = None) -> Union[Dict[str, int], int]:
         """
         Returns usage statistics for API keys by their variable names.
         
+        Args:
+            key_index: Optional index or identifier to get usage for a specific key:
+                      - None: returns all usage statistics (default)
+                      - int: returns usage for the key at that index (0-based)
+                      - "all": returns all usage statistics
+        
         Returns:
-            Usage counts for API keys, mapped by variable names (e.g., API_KEY_1)
+            Usage count or dictionary of usage counts
         """
-        # Return usage stats with variable names instead of actual keys
+        # Create usage stats with variable names
         named_stats = {}
         for key, count in self._usage_stats.items():
             var_name = self._key_names.get(key, "UNKNOWN_KEY")
             named_stats[var_name] = count
+        
+        # Handle different key_index options
+        if key_index is None or key_index == "all":
+            return named_stats
+        
+        # If key_index is an integer, return usage for that specific key
+        if isinstance(key_index, int):
+            if key_index < 0 or key_index >= len(self._api_keys):
+                raise IndexError(f"API key index out of range: {key_index}")
+            api_key = self._api_keys[key_index]
+            var_name = self._key_names.get(api_key, "UNKNOWN_KEY")
+            return named_stats[var_name]
+        
+        # If key_index is a string and matches a key name, return its usage
+        if isinstance(key_index, str) and key_index in named_stats:
+            return named_stats[key_index]
+        
+        # Otherwise return all stats
         return named_stats
     
     def get_all_keys(self) -> List[str]:
@@ -148,9 +172,20 @@ def hit(api_key: str) -> None:
     """Reports API key usage."""
     _apirotater.hit(api_key)
 
-def usage() -> Dict[str, int]:
-    """Returns usage statistics for all keys by their variable names."""
-    return _apirotater.usage()
+def usage(key_index: Union[int, str] = None) -> Union[Dict[str, int], int]:
+    """
+    Returns usage statistics for API keys.
+    
+    Args:
+        key_index: Optional index or identifier to get usage for a specific key:
+                  - None: returns all usage statistics (default)
+                  - int: returns usage for the key at that index (0-based)
+                  - "all": returns all usage statistics
+    
+    Returns:
+        Usage count or dictionary of usage counts
+    """
+    return _apirotater.usage(key_index)
 
 def get_all_keys() -> List[str]:
     """Lists all loaded API keys."""
