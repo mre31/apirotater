@@ -53,27 +53,6 @@ APIRotater automatically rotates through your API keys to ensure even distributi
 3. The next `key()` call will use a different key, maintaining rotation
 4. If a key has reached its rate limit, it will be skipped automatically
 
-```python
-import apirotater
-
-# First request - gets first available key
-key1 = apirotater.key(time_window=60, max_uses=2)
-# Use key1 for API request
-apirotater.hit(key1)  # Marks key1 as used and rotates to next key
-
-# Second request - gets next key due to rotation
-key2 = apirotater.key()  # This will be a different key than key1
-# Use key2 for API request
-apirotater.hit(key2)  # Marks key2 as used and rotates to next key
-
-# Third request - continues rotation
-key3 = apirotater.key()  # This will be the next key in rotation
-# Use key3 for API request
-apirotater.hit(key3)
-
-# Fourth request - completes the rotation cycle
-key4 = apirotater.key()  # This might be the first key again if you have 3 keys
-```
 
 ### Usage With Rate Limit
 
