@@ -25,6 +25,9 @@ class APIRotater:
         self._key_names = {}  # Map api key values to their variable names
         self._usage_stats = {}
         self._rate_limits = {}
+        self._current_key_index = 0  # Track the currently active key
+        self._time_window = 60  # Default time window
+        self._max_uses = 100  # Default max uses
         self._load_api_keys()
         self._initialized = True
     
@@ -50,9 +53,9 @@ class APIRotater:
                 self._usage_stats[value] = 0
                 self._rate_limits[value] = []
     
-    def key(self, time_window: int = 60, max_uses: int = 100) -> str:
+    def _get_available_key(self, time_window: int, max_uses: int) -> str:
         """
-        Returns an available API key.
+        Gets an available API key that hasn't reached its rate limit.
         
         Args:
             time_window: Time window (seconds)
@@ -67,10 +70,17 @@ class APIRotater:
         if not self._api_keys:
             raise ValueError("No API keys found. Add keys starting with API_ to your .env file.")
         
+        # Save these values for hit() to use later
+        self._time_window = time_window
+        self._max_uses = max_uses
+        
         now = datetime.now()
         available_keys = []
         
-        for api_key in self._api_keys:
+        # Try keys starting from current index first
+        reordered_keys = self._api_keys[self._current_key_index:] + self._api_keys[:self._current_key_index]
+        
+        for api_key in reordered_keys:
             # Clean up expired rate limit records
             self._rate_limits[api_key] = [
                 timestamp for timestamp in self._rate_limits[api_key] 
@@ -86,11 +96,32 @@ class APIRotater:
         
         # Choose the least used key
         available_keys.sort(key=lambda x: x[1])
-        return available_keys[0][0]
+        selected_key = available_keys[0][0]
+        
+        # Update current key index
+        self._current_key_index = self._api_keys.index(selected_key)
+        
+        return selected_key
+    
+    def key(self, time_window: int = 60, max_uses: int = 100) -> str:
+        """
+        Returns an available API key.
+        
+        Args:
+            time_window: Time window (seconds)
+            max_uses: Maximum number of uses in this time window
+            
+        Returns:
+            An available API key
+            
+        Raises:
+            RateLimitExceeded: When all keys have exceeded their rate limit
+        """
+        return self._get_available_key(time_window, max_uses)
     
     def hit(self, api_key: str) -> None:
         """
-        Reports that an API key has been used.
+        Reports that an API key has been used and rotates to the next available key.
         
         Args:
             api_key: The API key that was used
@@ -103,6 +134,18 @@ class APIRotater:
         
         # Update rate limit status
         self._rate_limits[api_key].append(datetime.now())
+        
+        # Move to the next key index
+        next_index = (self._api_keys.index(api_key) + 1) % len(self._api_keys)
+        self._current_key_index = next_index
+        
+        # Pre-check if we need to prepare for the next key
+        try:
+            # This won't return the key, just validate that one is available for next call
+            self._get_available_key(self._time_window, self._max_uses)
+        except RateLimitExceeded:
+            # We'll raise this on the next key() call, not during hit()
+            pass
     
     def usage(self, key_index: Union[int, str] = None) -> Union[Dict[str, int], int]:
         """
@@ -159,6 +202,19 @@ class APIRotater:
             Dictionary mapping API key values to their variable names
         """
         return self._key_names.copy()
+    
+    def get_current_key_name(self) -> str:
+        """
+        Returns the variable name of the current API key.
+        
+        Returns:
+            Variable name of the current API key (e.g., API_KEY_1)
+        """
+        if not self._api_keys:
+            return None
+        
+        current_key = self._api_keys[self._current_key_index]
+        return self._key_names.get(current_key, "UNKNOWN_KEY")
 
 # Singleton instance
 _apirotater = APIRotater()
@@ -169,7 +225,11 @@ def key(time_window: int = 60, max_uses: int = 100) -> str:
     return _apirotater.key(time_window, max_uses)
 
 def hit(api_key: str) -> None:
-    """Reports API key usage."""
+    """
+    Reports API key usage and rotates to the next available key.
+    This ensures each call to key() after hit() will use a different key
+    until all keys have been rotated through.
+    """
     _apirotater.hit(api_key)
 
 def usage(key_index: Union[int, str] = None) -> Union[Dict[str, int], int]:
@@ -193,4 +253,8 @@ def get_all_keys() -> List[str]:
 
 def get_key_names() -> Dict[str, str]:
     """Returns a mapping of API keys to their variable names."""
-    return _apirotater.get_key_names() 
+    return _apirotater.get_key_names()
+
+def get_current_key_name() -> str:
+    """Returns the variable name of the current API key."""
+    return _apirotater.get_current_key_name() 

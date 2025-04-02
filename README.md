@@ -20,7 +20,7 @@ pip install apirotater
 
 Define your API keys in a `.env` file as follows:
 
-```.env
+```
 API_KEY_1=your_api_key_1
 API_KEY_2=your_api_key_2
 API_KEY_3=your_api_key_3
@@ -39,6 +39,40 @@ api_key = apirotater.key()
 
 # Report API key usage
 apirotater.hit(api_key)
+
+# Next time you call key(), it will automatically use a different key
+next_api_key = apirotater.key()  # This will be a different key due to rotation
+```
+
+### Automatic Key Rotation
+
+APIRotater automatically rotates through your API keys to ensure even distribution and avoid rate limit issues:
+
+1. When you call `key()`, it returns the most suitable key based on current usage
+2. After you call `hit(api_key)`, the library automatically moves to the next key
+3. The next `key()` call will use a different key, maintaining rotation
+4. If a key has reached its rate limit, it will be skipped automatically
+
+```python
+import apirotater
+
+# First request - gets first available key
+key1 = apirotater.key(time_window=60, max_uses=2)
+# Use key1 for API request
+apirotater.hit(key1)  # Marks key1 as used and rotates to next key
+
+# Second request - gets next key due to rotation
+key2 = apirotater.key()  # This will be a different key than key1
+# Use key2 for API request
+apirotater.hit(key2)  # Marks key2 as used and rotates to next key
+
+# Third request - continues rotation
+key3 = apirotater.key()  # This will be the next key in rotation
+# Use key3 for API request
+apirotater.hit(key3)
+
+# Fourth request - completes the rotation cycle
+key4 = apirotater.key()  # This might be the first key again if you have 3 keys
 ```
 
 ### Usage With Rate Limit
@@ -52,7 +86,7 @@ api_key = apirotater.key(time_window=60, max_uses=2)
 # Make API request
 # ...
 
-# Report API key usage
+# Report API key usage - this also rotates to the next key
 apirotater.hit(api_key)
 ```
 
@@ -102,18 +136,23 @@ print(usage_of_key1)  # 1
 # Alternative way to get all statistics
 all_stats_alt = apirotater.usage("all")
 print(all_stats_alt)  # {'API_KEY_1': 1, 'API_KEY_2': 0, ...}
+
+# Check the current key being used
+current_key = apirotater.get_current_key_name()
+print(f"Current key: {current_key}")  # Current key: API_KEY_2
 ```
 
 ## API
 
 - `key(time_window=60, max_uses=100)`: Gets an API key (with rate limit)
-- `hit(api_key)`: Reports API key usage
+- `hit(api_key)`: Reports API key usage and rotates to the next key in sequence
 - `usage(key_index=None)`: Returns usage statistics:
   - `usage()` or `usage("all")`: All keys' usage statistics
   - `usage(0)`, `usage(1)`, etc.: Usage of a specific key by index
   - `usage("API_KEY_1")`: Usage of a specific key by name
 - `get_all_keys()`: Lists all loaded API keys
 - `get_key_names()`: Returns a mapping of API keys to their variable names
+- `get_current_key_name()`: Returns the variable name of the currently selected API key
 
 ## License
 
