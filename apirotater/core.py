@@ -1,6 +1,7 @@
 import os
 import time
 import dotenv
+import sys
 from typing import Dict, List, Tuple, Optional, Union, Any
 from datetime import datetime, timedelta
 
@@ -37,6 +38,7 @@ class APIRotater:
         paths = [
             os.getcwd(),                  # Current working directory
             os.path.dirname(os.getcwd()), # Parent directory
+            os.path.dirname(os.path.abspath(sys.argv[0])), # Executable directory for Windows exe support
         ]
         
         for path in paths:
@@ -52,6 +54,39 @@ class APIRotater:
                 self._key_names[value] = key  # Store variable name for this key
                 self._usage_stats[value] = 0
                 self._rate_limits[value] = []
+    
+    def load_env_file(self, env_path: str) -> bool:
+        """
+        Loads API keys from the specified .env file path.
+        
+        Args:
+            env_path: Path to the .env file
+            
+        Returns:
+            bool: True if the file was loaded successfully, False otherwise
+        """
+        if not os.path.exists(env_path):
+            return False
+            
+        # Load the .env file
+        dotenv.load_dotenv(env_path)
+        
+        # Clear existing keys
+        self._api_keys = []
+        self._key_names = {}
+        self._usage_stats = {}
+        self._rate_limits = {}
+        self._current_key_index = 0
+        
+        # Load all API keys from environment
+        for key, value in os.environ.items():
+            if key.startswith('API_KEY_') and value:
+                self._api_keys.append(value)
+                self._key_names[value] = key  # Store variable name for this key
+                self._usage_stats[value] = 0
+                self._rate_limits[value] = []
+                
+        return True
     
     def _get_available_key(self, time_window: int, max_uses: int) -> str:
         """
@@ -257,4 +292,16 @@ def get_key_names() -> Dict[str, str]:
 
 def get_current_key_name() -> str:
     """Returns the variable name of the current API key."""
-    return _apirotater.get_current_key_name() 
+    return _apirotater.get_current_key_name()
+
+def load_env_file(env_path: str) -> bool:
+    """
+    Yüklenen .env dosyasının konumunu belirtir ve API anahtarlarını yeniden yükler.
+    
+    Args:
+        env_path: .env dosyasının yolu
+        
+    Returns:
+        bool: Dosya başarıyla yüklenirse True, aksi takdirde False
+    """
+    return _apirotater.load_env_file(env_path) 

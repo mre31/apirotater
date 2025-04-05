@@ -69,6 +69,21 @@ api_key = apirotater.key(time_window=60, max_uses=2)
 apirotater.hit(api_key)
 ```
 
+### Manuel Olarak .env Dosyasının Konumunu Belirtme
+
+Uygulamanızı .exe olarak paketlediğinizde veya farklı bir konumda .env dosyanız bulunduğunda, dosya yolunu manuel olarak belirtebilirsiniz:
+
+```python
+import apirotater
+
+# .env dosyasının konumunu belirt
+env_path = "C:/path/to/your/.env"
+apirotater.load_env_file(env_path)
+
+# Sonra normal şekilde kullan
+api_key = apirotater.key()
+```
+
 ### Handling Rate Limit Exceedance
 
 ```python

@@ -1,6 +1,7 @@
 import apirotater
 import time
 import requests
+import os
 
 def make_api_request(api_key):
     """Example API request function."""
@@ -63,6 +64,27 @@ def rate_limit_example():
         result = make_api_request(api_key)
         print("Usage statistics:", apirotater.usage())
 
+def custom_env_path_example():
+    """Özel .env dosya konumu örneği."""
+    print("\n--- Özel .env Dosya Konumu Örneği ---")
+    
+    # Mevcut klasördeki .env dosyasını işaret et
+    current_dir = os.getcwd()
+    env_path = os.path.join(current_dir, ".env")
+    
+    # .env dosyasını belirtilen konumdan yükle
+    success = apirotater.load_env_file(env_path)
+    
+    if success:
+        print(f".env dosyası başarıyla yüklendi: {env_path}")
+        print("Yüklenen API anahtarları:", apirotater.get_all_keys())
+        
+        # Bir API anahtarı al ve kullan
+        api_key = apirotater.key()
+        result = make_api_request(api_key)
+    else:
+        print(f".env dosyası bulunamadı: {env_path}")
+
 if __name__ == "__main__":
     # Don't forget to add your keys to the .env file
     # API_KEY_1=your_api_key_1
@@ -81,3 +103,5 @@ if __name__ == "__main__":
     # Run example scenarios
     simple_example()
     rate_limit_example() 
+    # Özel .env dosya konumu örneğini çalıştır
+    # custom_env_path_example() 
