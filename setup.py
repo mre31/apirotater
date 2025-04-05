@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="apirotater",
-    version="0.4.6",
+    version="0.4.7",
     description="Python library for API key rotation, rate limit control and load balancing",
     long_description=long_description,
     long_description_content_type="text/markdown",
