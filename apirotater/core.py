@@ -57,7 +57,7 @@ class APIRotater:
     
     def load_env_file(self, env_path: str) -> bool:
         """
-        Loads API keys from the specified .env file path.
+        Loads API keys from the specified .env file location.
         
         Args:
             env_path: Path to the .env file
@@ -296,12 +296,12 @@ def get_current_key_name() -> str:
 
 def load_env_file(env_path: str) -> bool:
     """
-    Yüklenen .env dosyasının konumunu belirtir ve API anahtarlarını yeniden yükler.
+    Loads API keys from the specified .env file location.
     
     Args:
-        env_path: .env dosyasının yolu
+        env_path: Path to the .env file
         
     Returns:
-        bool: Dosya başarıyla yüklenirse True, aksi takdirde False
+        bool: True if the file was loaded successfully, False otherwise
     """
     return _apirotater.load_env_file(env_path) 

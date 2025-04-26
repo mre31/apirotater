@@ -1,14 +1,14 @@
 # APIRotater
 
-APIRotater is a Python library that helps you manage your API keys and control rate limits. By managing multiple API keys, it automatically performs key rotation in case of rate limit exceedance.
+A simple Python library that automatically manages and rotates multiple API keys to prevent rate limit issues.
 
-## Key Features
+## What It Does
 
-- **Automatic API Key Rotation:** Uses multiple API keys in rotation.
-- **Rate Limit Control:** You can set a maximum number of uses for each API key within a specific time window.
-- **Automatic .env File Loading:** Automatically loads API keys from .env files located in the current working directory or parent directory.
-- **Usage Statistics:** Tracks usage counts of API keys by variable names.
-- **RateLimitExceeded Exception:** Throws an error when all keys have exceeded their rate limit.
+- **Automatically rotates between multiple API keys** so you don't hit rate limits
+- **Tracks usage** of each API key
+- **Manages rate limits** by specifying max uses in a time window
+- **Loads API keys from .env files** in current directory, parent directory, or executable location
+- **Works with Windows EXE applications** when packaged
 
 ## Installation
 
@@ -16,17 +16,17 @@ APIRotater is a Python library that helps you manage your API keys and control r
 pip install apirotater
 ```
 
-## Usage
+## Quick Start
 
-Define your API keys in a `.env` file as follows:
+### 1. Create a .env file with your API keys
 
 ```
-API_KEY_1=your_api_key_1
-API_KEY_2=your_api_key_2
-API_KEY_3=your_api_key_3
+API_KEY_1=your_first_api_key
+API_KEY_2=your_second_api_key
+API_KEY_3=your_third_api_key
 ```
 
-### Basic Usage
+### 2. Use in your code
 
 ```python
 import apirotater
@@ -34,119 +34,95 @@ import apirotater
 # Get an API key
 api_key = apirotater.key()
 
-# Make API request
-# ...
+# Use the API key for your request
+response = make_your_api_request(api_key)
 
-# Report API key usage
+# IMPORTANT: Always report when you've used a key
 apirotater.hit(api_key)
-
-# Next time you call key(), it will automatically use a different key
-next_api_key = apirotater.key()  # This will be a different key due to rotation
 ```
 
-### Automatic Key Rotation
+## Basic Example
 
-APIRotater automatically rotates through your API keys to ensure even distribution and avoid rate limit issues:
+```python
+import apirotater
+import time
 
-1. When you call `key()`, it returns the most suitable key based on current usage
-2. After you call `hit(api_key)`, the library automatically moves to the next key
-3. The next `key()` call will use a different key, maintaining rotation
-4. If a key has reached its rate limit, it will be skipped automatically
+# Simple usage loop
+for _ in range(10):
+    # Get a new API key (rotates automatically)
+    api_key = apirotater.key()
+    
+    # Use the key for your API request
+    print(f"Making request with key: {api_key}")
+    
+    # IMPORTANT: Report that you used the key
+    apirotater.hit(api_key)
+    
+    # Wait before next request
+    time.sleep(1)
+```
 
-
-### Usage With Rate Limit
+## Rate Limiting
 
 ```python
 import apirotater
 
-# Get a key with maximum 2 uses in 60 seconds
-api_key = apirotater.key(time_window=60, max_uses=2)
+# Get a key with maximum 5 uses in 60 seconds
+api_key = apirotater.key(time_window=60, max_uses=5)
 
-# Make API request
-# ...
+# Use the key
+print(f"Using key: {api_key}")
 
-# Report API key usage - this also rotates to the next key
+# Report usage
 apirotater.hit(api_key)
 ```
 
-### Manuel Olarak .env Dosyasının Konumunu Belirtme
+## Custom .env File Location
 
-Uygulamanızı .exe olarak paketlediğinizde veya farklı bir konumda .env dosyanız bulunduğunda, dosya yolunu manuel olarak belirtebilirsiniz:
+For Windows EXE applications or custom setups, you can specify the .env file location:
 
 ```python
 import apirotater
+import os
+import sys
 
-# .env dosyasının konumunu belirt
-env_path = "C:/path/to/your/.env"
+# For regular applications - use current directory
+env_path = os.path.join(os.getcwd(), ".env")
+
+# For Windows EXE applications - use executable directory
+# env_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+
+# Load API keys from specific location
 apirotater.load_env_file(env_path)
 
-# Sonra normal şekilde kullan
+# Then use normally
 api_key = apirotater.key()
 ```
 
-### Handling Rate Limit Exceedance
+## API Reference
+
+- `key(time_window=60, max_uses=100)` - Get an API key
+- `hit(api_key)` - Report that you've used an API key (ALWAYS call this)
+- `load_env_file(path)` - Load API keys from a specific .env file
+- `usage()` - Get usage statistics for all keys
+- `get_all_keys()` - Get a list of all loaded API keys
+- `get_current_key_name()` - Get the name of the current API key
+
+## Error Handling
 
 ```python
 import apirotater
 import time
 
 try:
-    # Get a key with rate limit
-    api_key = apirotater.key(time_window=60, max_uses=2)
-    
-    # Make API request
-    # ...
-    
-    # Report API key usage
+    api_key = apirotater.key()
+    # Use the key...
     apirotater.hit(api_key)
-    
-except apirotater.RateLimitExceeded as e:
-    print(f"Rate limit exceeded: {e}")
-    # Wait for a while and try again
-    time.sleep(60)
+except apirotater.RateLimitExceeded:
+    # All keys exceeded rate limits
+    print("All API keys reached rate limit")
+    time.sleep(60)  # Wait and try again
 ```
-
-### Checking Usage Statistics
-
-```python
-import apirotater
-
-# Get and use an API key
-api_key = apirotater.key()
-apirotater.hit(api_key)
-
-# Get all usage statistics (returns a dictionary with API_KEY_* names)
-all_stats = apirotater.usage()
-print(all_stats)  # {'API_KEY_1': 1, 'API_KEY_2': 0, ...}
-
-# Get usage for a specific key by index (0-based)
-first_key_usage = apirotater.usage(0)
-print(first_key_usage)  # 1
-
-# Get usage for a specific key by name
-usage_of_key1 = apirotater.usage("API_KEY_1")
-print(usage_of_key1)  # 1
-
-# Alternative way to get all statistics
-all_stats_alt = apirotater.usage("all")
-print(all_stats_alt)  # {'API_KEY_1': 1, 'API_KEY_2': 0, ...}
-
-# Check the current key being used
-current_key = apirotater.get_current_key_name()
-print(f"Current key: {current_key}")  # Current key: API_KEY_2
-```
-
-## API
-
-- `key(time_window=60, max_uses=100)`: Gets an API key (with rate limit)
-- `hit(api_key)`: Reports API key usage and rotates to the next key in sequence
-- `usage(key_index=None)`: Returns usage statistics:
-  - `usage()` or `usage("all")`: All keys' usage statistics
-  - `usage(0)`, `usage(1)`, etc.: Usage of a specific key by index
-  - `usage("API_KEY_1")`: Usage of a specific key by name
-- `get_all_keys()`: Lists all loaded API keys
-- `get_key_names()`: Returns a mapping of API keys to their variable names
-- `get_current_key_name()`: Returns the variable name of the currently selected API key
 
 ## License
 
